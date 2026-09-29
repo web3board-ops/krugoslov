@@ -25,7 +25,8 @@ class GigaChatToken:
                 return self.token
             
             # Request new token
-            async with httpx.AsyncClient(verify=settings.GIGACHAT_CA_CERT_PATH or True) as client:
+            verify_ssl = False  # Отключаем проверку SSL для разработки
+            async with httpx.AsyncClient(verify=verify_ssl) as client:
                 response = await client.post(
                     "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
                     headers={
@@ -112,8 +113,9 @@ async def chat(
         while attempt <= max_retries:
             attempt += 1
             try:
+                verify_ssl = False  # Отключаем проверку SSL для разработки
                 async with httpx.AsyncClient(
-                    verify=settings.GIGACHAT_CA_CERT_PATH or True,
+                    verify=verify_ssl,
                     timeout=timeout
                 ) as client:
                     response = await client.post(
