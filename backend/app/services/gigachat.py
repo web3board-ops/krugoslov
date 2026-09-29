@@ -296,9 +296,10 @@ async def chat_json(
             
             # Validate
             if not validator(parsed):
+                logger.error(f"JSON validation failed. Parsed data: {parsed}")
                 if attempt <= max_retries:
                     continue
-                raise Exception("JSON validation failed")
+                raise Exception(f"JSON validation failed. Response: {content[:500]}")
             
             return parsed
         

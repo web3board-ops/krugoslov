@@ -1,7 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 from app.config import settings
 from app.api import auth, onboarding, dashboard, lesson, vocabulary, profile, settings as settings_api, admin
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = FastAPI(
     title="WordFlow API",
