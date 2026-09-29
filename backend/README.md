@@ -164,6 +164,100 @@ backend/
 
 ## Интеграция с GigaChat
 
+### Настройка GigaChat
+
+#### 1. Получить ключ авторизации
+
+1. Зарегистрироваться на https://developers.sber.ru/
+2. Создать проект GigaChat API
+3. Получить Authorization key (Base64 от Client ID:Client Secret)
+
+**Важно:** Ключ авторизации — это строка Base64, которая уже закодирована в личном кабинете. Не нужно кодировать её самостоятельно.
+
+#### 2. Указать в `.env`
+
+```env
+# Ключ авторизации из личного кабинета
+GIGACHAT_AUTH_KEY=your_base64_encoded_credentials
+
+# Scope зависит от типа доступа:
+# - GIGACHAT_API_PERS - физические лица (бесплатно)
+# - GIGACHAT_API_B2B - ИП и юрлица (пакеты токенов)
+# - GIGACHAT_API_CORP - ИП и юрлица (pay-as-you-go)
+GIGACHAT_SCOPE=GIGACHAT_API_PERS
+
+# Модель для генерации
+# Доступные: GigaChat, GigaChat-2-Pro, GigaChat-2-Max, GigaChat-3-Ultra
+GIGACHAT_MODEL=GigaChat
+
+# Путь к сертификату (см. ниже)
+GIGACHAT_CA_CERT_PATH=
+
+# Максимум параллельных запросов
+GIGACHAT_MAX_CONCURRENCY=5
+```
+
+#### 3. SSL сертификат
+
+**Для разработки:**
+- Оставьте `GIGACHAT_CA_CERT_PATH` пустым
+- SSL проверка отключена автоматически
+
+**Для production:**
+```bash
+# Скачать корневой сертификат НУЦ Минцифры
+python scripts/download_cert.py
+
+# Или вручную:
+wget https://gu-st.ru/content/lending/russian_trusted_root_ca.cer -O certs/russian_trusted_root_ca.cer
+
+# Указать путь в .env
+GIGACHAT_CA_CERT_PATH=/path/to/russian_trusted_root_ca.cer
+```
+
+**Альтернатива:** Установить сертификат в системное хранилище ОС.
+
+### API Endpoints
+
+GigaChat API использует два разных URL:
+
+| Назначение | URL |
+|------------|-----|
+| Получение токена | `https://ngw.devices.sberbank.ru:9443/api/v2/oauth` |
+| Все остальные запросы | `https://api.giga.chat/v1` |
+
+**Важно:** Не используйте старый URL `https://gigachat.devices.sberbank.ru/api/v1` — он устарел.
+
+### Промпты
+
+Промпты для LLM находятся в `backend/app/prompts/templates.py`:
+- `build_generation_prompt()` - генерация предложений
+- `build_evaluation_prompt()` - оценка переводов
+
+### Обработка ошибок
+
+Код обрабатывает следующие ошибки:
+- `401` - токен истёк, автоматическое обновление
+- `429` - rate limit, повтор с backoff
+- `402` - квота исчерпана
+- `5xx` - серверная ошибка, повтор
+
+Все вызовы логируются в таблицу `llm_calls` для анализа и отладки.
+
+### Тарифы и лимиты
+
+- Токен доступа живёт 30 минут
+- Получать токен можно не чаще 10 раз в секунду
+- Тарифы: https://developers.sber.ru/docs/ru/gigachat/api/tariffs
+
+### Полезные ссылки
+
+- Документация: https://developers.sber.ru/docs/ru/gigachat/api/main
+- Получение токена: https://developers.sber.ru/docs/ru/gigachat/api/reference/rest/post-token
+- Генерация ответа: https://developers.sber.ru/docs/ru/gigachat/api/reference/rest/post-chat
+- Ошибки: https://developers.sber.ru/docs/ru/gigachat/api/errors-description
+- SDK: https://developers.sber.ru/docs/ru/gigachat/guides/using-sdks
+
 ### Генерация предложений (Prompt 1)
 - Batch-запрос для всех групп слов
 - Валидация: surface_form в предложении, нет кириллицы, длина ≤15 слов

@@ -16,33 +16,38 @@ logger = logging.getLogger(__name__)
 class GigaChatToken:
     def __init__(self):
         self.token: Optional[str] = None
-        self.expires_at: Optional[datetime] = None
+        self.expires_at: Optional[float] = None  # Unix timestamp в секундах
         self._lock = asyncio.Lock()
     
     async def get_token(self) -> str:
         async with self._lock:
-            if self.token and self.expires_at and datetime.utcnow() < self.expires_at - timedelta(seconds=120):
+            current_time = time.time()
+            # Обновляем токен за 60 секунд до истечения
+            if self.token and self.expires_at and current_time < self.expires_at - 60:
                 return self.token
             
             # Request new token
-            verify_ssl = False  # Отключаем проверку SSL для разработки
+            verify_ssl = False  # Для разработки. В production использовать сертификат НУЦ Минцифры
             async with httpx.AsyncClient(verify=verify_ssl) as client:
                 response = await client.post(
                     "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
                     headers={
                         "Authorization": f"Basic {settings.GIGACHAT_AUTH_KEY}",
                         "RqUID": str(uuid.uuid4()),
-                        "Content-Type": "application/x-www-form-urlencoded"
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Accept": "application/json"
                     },
                     data={"scope": settings.GIGACHAT_SCOPE}
                 )
                 
                 if response.status_code != 200:
+                    logger.error(f"Failed to get GigaChat token: {response.status_code} - {response.text}")
                     raise Exception(f"Failed to get GigaChat token: {response.status_code}")
                 
                 data = response.json()
                 self.token = data["access_token"]
-                self.expires_at = datetime.utcnow() + timedelta(milliseconds=data["expires_at"])
+                # expires_at - это unix timestamp в миллисекундах, конвертируем в секунды
+                self.expires_at = data["expires_at"] / 1000.0
                 
                 return self.token
 
@@ -113,16 +118,18 @@ async def chat(
         while attempt <= max_retries:
             attempt += 1
             try:
-                verify_ssl = False  # Отключаем проверку SSL для разработки
+                verify_ssl = False  # Для разработки. В production использовать сертификат НУЦ Минцифры
                 async with httpx.AsyncClient(
                     verify=verify_ssl,
                     timeout=timeout
                 ) as client:
                     response = await client.post(
-                        "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+                        "https://api.giga.chat/v1/chat/completions",
                         headers={
                             "Authorization": f"Bearer {token}",
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                            "User-Agent": "WordFlow/1.0"
                         },
                         json={
                             "model": settings.GIGACHAT_MODEL,
