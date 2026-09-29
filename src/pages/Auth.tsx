@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { LogIn, UserPlus } from 'lucide-react';
@@ -8,28 +8,41 @@ export function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, register } = useStore();
+  const [loading, setLoading] = useState(false);
+  const { login, register, isAuthenticated, user } = useStore();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user?.is_onboarded) {
+        navigate('/');
+      } else {
+        navigate('/onboarding');
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
     if (!email.includes('@')) {
       setError('Введите корректный email');
+      setLoading(false);
       return;
     }
     if (password.length < 8) {
       setError('Пароль должен быть не менее 8 символов');
+      setLoading(false);
       return;
     }
     
-    const success = isLogin ? login(email, password) : register(email, password);
-    if (success) {
-      navigate('/onboarding');
-    } else {
-      setError('Ошибка. Попробуйте ещё раз.');
+    const success = isLogin ? await login(email, password) : await register(email, password);
+    if (!success) {
+      setError('Ошибка. Проверьте email и пароль.');
     }
+    setLoading(false);
   };
 
   return (
@@ -91,10 +104,17 @@ export function AuthPage() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-[var(--color-primary)] text-white font-medium rounded-xl hover:bg-[var(--color-primary-dark)] transition-colors flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full py-3 bg-[var(--color-primary)] text-white font-medium rounded-xl hover:bg-[var(--color-primary-dark)] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {isLogin ? <LogIn size={18} /> : <UserPlus size={18} />}
-              {isLogin ? 'Войти' : 'Зарегистрироваться'}
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  {isLogin ? <LogIn size={18} /> : <UserPlus size={18} />}
+                  {isLogin ? 'Войти' : 'Зарегистрироваться'}
+                </>
+              )}
             </button>
           </form>
         </div>

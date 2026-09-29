@@ -6,43 +6,63 @@ import { X, AlertTriangle } from 'lucide-react';
 export function LessonIntroPage() {
   const navigate = useNavigate();
   const { previewLesson, declineNewWord, startLesson } = useStore();
-  const [preview, setPreview] = useState(previewLesson());
-  const [declinedWords, setDeclinedWords] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
-    if (preview.state === 'resume' && preview.lesson_id) {
-      navigate(`/lesson/resume/${preview.lesson_id}`);
-    }
-    if (preview.state === 'limit_reached') {
-      navigate('/');
-    }
-  }, [preview, navigate]);
+    loadPreview();
+  }, []);
 
-  const handleDecline = (wordId: number) => {
-    setDeclinedWords(prev => new Set(prev).add(wordId));
-    const newPreview = declineNewWord(wordId);
+  const loadPreview = async () => {
+    try {
+      const data = await previewLesson();
+      setPreview(data);
+      
+      if (data.state === 'resume' && data.lesson_id) {
+        navigate(`/lesson/resume/${data.lesson_id}`);
+      }
+      if (data.state === 'limit_reached') {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Failed to load preview:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDecline = async (wordId: number) => {
+    const newPreview = await declineNewWord(wordId);
     setPreview(newPreview);
   };
 
-  const handleStart = () => {
-    setLoading(true);
-    // Simulate LLM generation delay
-    setTimeout(() => {
+  const handleStart = async () => {
+    setStarting(true);
+    try {
       const allWordIds = [
-        ...(preview.due_words || []).map(w => w.word_id),
-        ...(preview.new_words || []).map(w => w.word_id),
+        ...(preview.due_words || []).map((w: any) => w.word_id),
+        ...(preview.new_words || []).map((w: any) => w.word_id),
       ];
       
-      const lesson = startLesson(allWordIds);
-      if (lesson) {
-        navigate(`/lesson/${lesson.id}/exercise/${lesson.exercises[0].id}`);
-      }
-      setLoading(false);
-    }, 1500);
+      const lesson = await startLesson(allWordIds);
+      navigate(`/lesson/${lesson.lesson_id}/exercise/${lesson.current_exercise.exercise_id}`);
+    } catch (error) {
+      console.error('Failed to start lesson:', error);
+    } finally {
+      setStarting(false);
+    }
   };
 
-  if (preview.state === 'no_words') {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-[var(--color-primary)] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!preview || preview.state === 'no_words') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
@@ -51,7 +71,7 @@ export function LessonIntroPage() {
           </div>
           <h2 className="text-xl font-bold mb-2">Нет новых слов</h2>
           <p className="text-[var(--color-text-secondary)] mb-6">
-            В этом словаре нет новых слов для вашего уровня. Выберите другой словарь в настройках.
+            В этом словаре нет новых слов для вашего уровня.
           </p>
           <button
             onClick={() => navigate('/settings/learning')}
@@ -64,28 +84,17 @@ export function LessonIntroPage() {
     );
   }
 
-  if (preview.state !== 'ready') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-[var(--color-primary)] border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
   const totalWords = (preview.due_words?.length || 0) + (preview.new_words?.length || 0);
 
   return (
     <div className="min-h-screen flex flex-col max-w-[640px] mx-auto">
-      {/* Loading overlay */}
-      {loading && (
+      {starting && (
         <div className="fixed inset-0 bg-white/90 z-50 flex flex-col items-center justify-center">
           <div className="animate-spin w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full mb-4" />
-          <p className="text-lg font-medium text-[var(--color-text)]">Готовим урок…</p>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">Генерируем предложения</p>
+          <p className="text-lg font-medium">Готовим урок…</p>
         </div>
       )}
 
-      {/* Header */}
       <div className="px-4 py-6">
         <button onClick={() => navigate('/')} className="text-sm text-[var(--color-text-secondary)] mb-4">
           ← Назад
@@ -94,22 +103,18 @@ export function LessonIntroPage() {
         <p className="text-[var(--color-text-secondary)] mt-1">{totalWords} слов в уроке</p>
       </div>
 
-      {/* Dictionary exhausted banner */}
       {preview.dictionary_exhausted && (
         <div className="mx-4 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
           <AlertTriangle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-amber-700">
-            Слова в словаре заканчиваются. После этого урока выберите другой словарь.
-          </p>
+          <p className="text-sm text-amber-700">Слова в словаре заканчиваются.</p>
         </div>
       )}
 
-      {/* Due words */}
       {(preview.due_words?.length || 0) > 0 && (
         <div className="px-4 mb-4">
           <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Повторение</h3>
           <div className="flex flex-wrap gap-2">
-            {preview.due_words!.map(w => (
+            {preview.due_words!.map((w: any) => (
               <span key={w.word_id} className="px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-sm font-medium">
                 {w.lemma}
               </span>
@@ -118,44 +123,33 @@ export function LessonIntroPage() {
         </div>
       )}
 
-      {/* New words */}
       {(preview.new_words?.length || 0) > 0 && (
         <div className="px-4 mb-6">
           <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Новые слова</h3>
           <div className="space-y-2">
-            {preview.new_words!.map(w => (
-              <div
-                key={w.word_id}
-                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                  declinedWords.has(w.word_id) ? 'opacity-40 border-gray-100 bg-gray-50' : 'border-[var(--color-border)] bg-white'
-                }`}
-              >
+            {preview.new_words!.map((w: any) => (
+              <div key={w.word_id} className="flex items-center justify-between p-3 rounded-xl border border-[var(--color-border)] bg-white">
                 <div>
                   <span className="font-medium">{w.lemma}</span>
-                  <span className="text-xs text-[var(--color-text-secondary)] ml-2">{w.pos}</span>
                   <div className="text-sm text-[var(--color-text-secondary)]">{w.translations.join(', ')}</div>
                 </div>
-                {!declinedWords.has(w.word_id) && (
-                  <button
-                    onClick={() => handleDecline(w.word_id)}
-                    className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-                    title="Не добавлять"
-                  >
-                    <X size={16} className="text-gray-400" />
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDecline(w.word_id)}
+                  className="p-1.5 rounded-full hover:bg-gray-100"
+                >
+                  <X size={16} className="text-gray-400" />
+                </button>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Start button */}
       <div className="px-4 mt-auto pb-8">
         <button
           onClick={handleStart}
-          disabled={loading || totalWords === 0}
-          className="w-full py-4 bg-[var(--color-primary)] text-white font-semibold rounded-2xl hover:bg-[var(--color-primary-dark)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={starting || totalWords === 0}
+          className="w-full py-4 bg-[var(--color-primary)] text-white font-semibold rounded-2xl hover:bg-[var(--color-primary-dark)] transition-all disabled:opacity-50"
         >
           Поехали! 🚀
         </button>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { Flame, BookOpen, Target, Award, Settings, ChevronRight } from 'lucide-react';
@@ -5,17 +6,39 @@ import { Flame, BookOpen, Target, Award, Settings, ChevronRight } from 'lucide-r
 export function HomePage() {
   const navigate = useNavigate();
   const { getDashboardSummary, user } = useStore();
-  
-  if (!user) return null;
-  const summary = getDashboardSummary();
+  const [summary, setSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSummary();
+  }, []);
+
+  const loadSummary = async () => {
+    try {
+      const data = await getDashboardSummary();
+      setSummary(data);
+    } catch (error) {
+      console.error('Failed to load summary:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !summary) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-[var(--color-primary)] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   const getCtaButton = () => {
     switch (summary.cta) {
       case 'resume':
         return {
           text: 'Продолжить урок',
-          subtext: `Выполнено ${summary.resume!.exercises_done} из ${summary.resume!.exercises_total}`,
-          onClick: () => navigate(`/lesson/resume/${summary.resume!.lesson_id}`),
+          subtext: `Выполнено ${summary.resume.exercises_done} из ${summary.resume.exercises_total}`,
+          onClick: () => navigate(`/lesson/resume/${summary.resume.lesson_id}`),
           color: 'bg-amber-500 hover:bg-amber-600',
         };
       case 'limit_reached':
@@ -41,7 +64,6 @@ export function HomePage() {
 
   return (
     <div className="px-4 py-6 animate-fade-in">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold">Привет! 👋</h1>
@@ -55,7 +77,6 @@ export function HomePage() {
         </button>
       </div>
 
-      {/* Streak */}
       <div className={`rounded-2xl p-4 mb-4 ${streakAtRisk ? 'bg-amber-50 border border-amber-200' : 'bg-gradient-to-r from-orange-50 to-red-50 border border-orange-100'}`}>
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
@@ -77,7 +98,6 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Today's progress */}
       <div className="bg-white rounded-2xl border border-[var(--color-border)] p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-[var(--color-text-secondary)]">Сегодня</span>
@@ -91,7 +111,6 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Words summary */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-[var(--color-border)] p-3 text-center">
           <div className="flex items-center justify-center mb-1">
@@ -116,7 +135,6 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* CTA Button */}
       <button
         onClick={cta.onClick}
         disabled={'disabled' in cta && cta.disabled}
@@ -131,7 +149,6 @@ export function HomePage() {
         <p className="text-center text-xs text-[var(--color-text-secondary)] mt-2">{cta.subtext}</p>
       )}
 
-      {/* Limit reached info */}
       {summary.cta === 'limit_reached' && (
         <div className="mt-4 p-3 bg-gray-50 rounded-xl text-center">
           <p className="text-sm text-[var(--color-text-secondary)]">
