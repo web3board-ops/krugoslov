@@ -8,13 +8,23 @@ build/
 .env
 .env.local
 .env.*.local
+backend/.env
 
 # Backend
-backend/.env
 backend/venv/
 backend/__pycache__/
 backend/**/__pycache__/
 *.pyc
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
 
 # IDE
 .vscode/
