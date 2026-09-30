@@ -44,6 +44,7 @@ export interface LearningProfile {
   level: Level;
   dictionary_id: number;
   daily_lesson_limit: number;
+  words_per_lesson: number;
   last_lesson_number: number;
   created_at: string;
 }

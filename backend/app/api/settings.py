@@ -112,7 +112,9 @@ async def get_learning_profile_info(
         dictionary_id=profile.dictionary_id,
         dictionary_name=dictionary.name,
         daily_lesson_limit=profile.daily_lesson_limit,
-        daily_lesson_limit_max=settings.DAILY_LESSON_LIMIT_MAX
+        daily_lesson_limit_max=settings.DAILY_LESSON_LIMIT_MAX,
+        words_per_lesson=profile.words_per_lesson,
+        words_per_lesson_max=settings.WORDS_PER_LESSON_MAX
     )
 
 
@@ -137,6 +139,11 @@ async def update_learning_profile(
         if request.daily_lesson_limit > settings.DAILY_LESSON_LIMIT_MAX:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
         profile.daily_lesson_limit = request.daily_lesson_limit
+    
+    if request.words_per_lesson is not None:
+        if request.words_per_lesson > settings.WORDS_PER_LESSON_MAX:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        profile.words_per_lesson = request.words_per_lesson
     
     await db.commit()
     

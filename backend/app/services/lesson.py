@@ -45,7 +45,7 @@ async def select_words_for_lesson(
     Returns:
         (due_words, new_words, dictionary_exhausted)
     """
-    N = settings.WORDS_PER_LESSON
+    N = profile.words_per_lesson
     seed = f"{profile.id}:{next_lesson_number}"
     
     # Get due words

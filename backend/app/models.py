@@ -134,6 +134,7 @@ class LearningProfile(Base):
     level = Column(String(2), nullable=False)
     dictionary_id = Column(Integer, ForeignKey("dictionaries.id"), nullable=False)
     daily_lesson_limit = Column(Integer, nullable=False)
+    words_per_lesson = Column(Integer, nullable=False, default=5)
     last_lesson_number = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

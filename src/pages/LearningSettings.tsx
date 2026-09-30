@@ -8,6 +8,8 @@ export function LearningSettingsPage() {
   const [level, setLevel] = useState(profile?.level || 'A1');
   const [dictionaryId, setDictionaryId] = useState(profile?.dictionary_id || 1);
   const [dailyLimit, setDailyLimit] = useState(profile?.daily_lesson_limit || 3);
+  const [wordsPerLesson, setWordsPerLesson] = useState(profile?.words_per_lesson || 5);
+  const [wordsPerLessonMax, setWordsPerLessonMax] = useState(10);
   const [dictionaries, setDictionaries] = useState<any[]>([]);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,6 +31,8 @@ export function LearningSettingsPage() {
         setLevel(profileData.level);
         setDictionaryId(profileData.dictionary_id);
         setDailyLimit(profileData.daily_lesson_limit);
+        setWordsPerLesson(profileData.words_per_lesson);
+        setWordsPerLessonMax(profileData.words_per_lesson_max);
       }
       
       if (dictionariesData) {
@@ -43,7 +47,7 @@ export function LearningSettingsPage() {
 
   const handleSave = async () => {
     try {
-      await updateProfile({ level, dictionary_id: dictionaryId, daily_lesson_limit: dailyLimit });
+      await updateProfile({ level, dictionary_id: dictionaryId, daily_lesson_limit: dailyLimit, words_per_lesson: wordsPerLesson });
       
       // Перезагружаем данные профиля для отображения изменений
       const profileData = await getLearningProfile();
@@ -51,6 +55,8 @@ export function LearningSettingsPage() {
         setLevel(profileData.level);
         setDictionaryId(profileData.dictionary_id);
         setDailyLimit(profileData.daily_lesson_limit);
+        setWordsPerLesson(profileData.words_per_lesson);
+        setWordsPerLessonMax(profileData.words_per_lesson_max);
       }
       
       setSaved(true);
@@ -97,12 +103,22 @@ export function LearningSettingsPage() {
           ))}
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-[var(--color-border)] p-4 mb-6">
+      <div className="bg-white rounded-xl border border-[var(--color-border)] p-4 mb-4">
         <span className="font-medium text-sm block mb-3">Уроков в день</span>
         <div className="flex items-center gap-3">
           <input type="range" min={1} max={5} value={dailyLimit} onChange={e => setDailyLimit(Number(e.target.value))} className="flex-1" />
           <span className="text-lg font-bold w-8 text-center">{dailyLimit}</span>
         </div>
+      </div>
+      <div className="bg-white rounded-xl border border-[var(--color-border)] p-4 mb-6">
+        <span className="font-medium text-sm block mb-3">Слов в уроке</span>
+        <div className="flex items-center gap-3">
+          <input type="range" min={1} max={wordsPerLessonMax} value={wordsPerLesson} onChange={e => setWordsPerLesson(Number(e.target.value))} className="flex-1" />
+          <span className="text-lg font-bold w-8 text-center">{wordsPerLesson}</span>
+        </div>
+        <p className="text-xs text-[var(--color-text-secondary)] mt-2">
+          Максимум: {wordsPerLessonMax} слов
+        </p>
       </div>
       <button onClick={handleSave} className={`w-full py-3 font-medium rounded-xl ${saved ? 'bg-green-500 text-white' : 'bg-[var(--color-primary)] text-white'}`}>
         {saved ? '✓ Сохранено' : 'Сохранить'}

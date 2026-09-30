@@ -54,6 +54,7 @@ async def complete_onboarding(
         level=request.level.value,
         dictionary_id=general_dict.id,
         daily_lesson_limit=settings.DAILY_LESSON_LIMIT_DEFAULT,
+        words_per_lesson=settings.WORDS_PER_LESSON,
         last_lesson_number=0
     )
     db.add(profile)

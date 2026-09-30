@@ -271,12 +271,15 @@ class LearningProfileResponse(BaseModel):
     dictionary_name: str
     daily_lesson_limit: int
     daily_lesson_limit_max: int
+    words_per_lesson: int
+    words_per_lesson_max: int
 
 
 class UpdateLearningProfileRequest(BaseModel):
     level: Optional[Level] = None
     dictionary_id: Optional[int] = None
     daily_lesson_limit: Optional[int] = Field(None, ge=1)
+    words_per_lesson: Optional[int] = Field(None, ge=1)
 
 
 class DictionaryResponse(BaseModel):

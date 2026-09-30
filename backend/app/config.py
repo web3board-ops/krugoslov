@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     
     # Lessons
     WORDS_PER_LESSON: int = 5
+    WORDS_PER_LESSON_MAX: int = 10
     DAILY_LESSON_LIMIT_DEFAULT: int = 3
     DAILY_LESSON_LIMIT_MAX: int = 5
     
