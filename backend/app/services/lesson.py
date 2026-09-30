@@ -423,7 +423,20 @@ async def evaluate_translation(
     target_word_ids = set(w["word_id"] for w in target_words)
     
     def validator(data):
-        return validate_evaluation(data, target_word_ids, user_translation)
+        # Если результат - массив оценок (альтернативный формат)
+        if isinstance(data, list):
+            # Проверяем, что все элементы имеют result
+            for item in data:
+                if not isinstance(item, dict) or "result" not in item:
+                    return False
+            # Проверяем количество оценок
+            if len(data) != len(target_words):
+                return False
+            return True
+        # Если результат - полная структура
+        elif isinstance(data, dict):
+            return validate_evaluation(data, target_word_ids, user_translation)
+        return False
     
     result = await chat_json(
         messages=messages,
@@ -436,5 +449,23 @@ async def evaluate_translation(
         exercise_id=exercise_id,
         purpose="evaluation"
     )
+    
+    # Если результат - массив оценок, преобразуем в полную структуру
+    if isinstance(result, list):
+        # Сопоставляем оценки с target_words по порядку
+        evaluations = []
+        for i, eval_item in enumerate(result):
+            if i < len(target_words):
+                word = target_words[i]
+                evaluations.append({
+                    "word_id": word["word_id"],
+                    "result": eval_item.get("result", "incorrect"),
+                    "user_fragment": eval_item.get("user_fragment")
+                })
+        
+        result = {
+            "evaluations": evaluations,
+            "new_suggested_words": []
+        }
     
     return result

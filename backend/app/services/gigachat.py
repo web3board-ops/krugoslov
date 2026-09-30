@@ -265,12 +265,54 @@ async def chat_json(
                 content = content[:-3]
             content = content.strip()
             
-            # Просто парсим JSON напрямую
+            # Парсим JSON - пробуем разные форматы
+            parsed = None
+            
+            # Попытка 1: обычный JSON
             try:
                 parsed = json.loads(content)
-            except json.JSONDecodeError as e:
-                logger.warning(f"Direct JSON parse failed: {e}. Content: {content[:200]}")
-                raise Exception(f"Invalid JSON from LLM: {e}")
+            except json.JSONDecodeError:
+                pass
+            
+            # Попытка 2: JSON Lines (несколько объектов подряд)
+            if parsed is None:
+                try:
+                    lines = content.strip().split('\n')
+                    objects = []
+                    for line in lines:
+                        line = line.strip()
+                        if line:
+                            objects.append(json.loads(line))
+                    if objects:
+                        parsed = objects
+                except json.JSONDecodeError:
+                    pass
+            
+            # Попытка 3: извлечь JSON объекты вручную
+            if parsed is None:
+                try:
+                    objects = []
+                    depth = 0
+                    start = None
+                    for i, char in enumerate(content):
+                        if char == '{':
+                            if depth == 0:
+                                start = i
+                            depth += 1
+                        elif char == '}':
+                            depth -= 1
+                            if depth == 0 and start is not None:
+                                obj_str = content[start:i+1]
+                                objects.append(json.loads(obj_str))
+                                start = None
+                    if objects:
+                        parsed = objects
+                except (json.JSONDecodeError, Exception):
+                    pass
+            
+            if parsed is None:
+                logger.warning(f"Failed to parse JSON from content: {content[:200]}")
+                raise Exception(f"Invalid JSON from LLM")
             
             # Validate
             if not validator(parsed):
