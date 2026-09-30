@@ -49,8 +49,11 @@ async def select_words_for_lesson(
     seed = f"{profile.id}:{next_lesson_number}"
     
     # Get due words
+    from sqlalchemy.orm import selectinload
     result = await db.execute(
-        select(UserWord).where(
+        select(UserWord)
+        .options(selectinload(UserWord.word))
+        .where(
             UserWord.learning_profile_id == profile.id,
             UserWord.status == WordStatus.active,
             UserWord.due_lesson_number <= next_lesson_number
