@@ -10,34 +10,67 @@ export function LearningSettingsPage() {
   const [dailyLimit, setDailyLimit] = useState(profile?.daily_lesson_limit || 3);
   const [dictionaries, setDictionaries] = useState<any[]>([]);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDictionaries();
+    loadData();
   }, []);
 
-  const loadDictionaries = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      const data = await getDictionaries();
-      setDictionaries(data);
+      // Загружаем актуальные данные из API
+      const [profileData, dictionariesData] = await Promise.all([
+        getLearningProfile(),
+        getDictionaries()
+      ]);
+      
+      if (profileData) {
+        setLevel(profileData.level);
+        setDictionaryId(profileData.dictionary_id);
+        setDailyLimit(profileData.daily_lesson_limit);
+      }
+      
+      if (dictionariesData) {
+        setDictionaries(dictionariesData);
+      }
     } catch (error) {
-      console.error('Failed to load dictionaries:', error);
+      console.error('Failed to load data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSave = async () => {
-    await updateProfile({ level, dictionary_id: dictionaryId, daily_lesson_limit: dailyLimit });
-    
-    // Перезагружаем данные профиля для отображения изменений
-    const profileData = await getLearningProfile();
-    if (profileData) {
-      setLevel(profileData.level);
-      setDictionaryId(profileData.dictionary_id);
-      setDailyLimit(profileData.daily_lesson_limit);
+    try {
+      await updateProfile({ level, dictionary_id: dictionaryId, daily_lesson_limit: dailyLimit });
+      
+      // Перезагружаем данные профиля для отображения изменений
+      const profileData = await getLearningProfile();
+      if (profileData) {
+        setLevel(profileData.level);
+        setDictionaryId(profileData.dictionary_id);
+        setDailyLimit(profileData.daily_lesson_limit);
+      }
+      
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      alert('Ошибка при сохранении настроек');
     }
-    
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   };
+
+  if (loading) {
+    return (
+      <div className="px-4 py-6 max-w-[640px] mx-auto">
+        <button onClick={() => navigate('/settings')} className="text-sm text-[var(--color-text-secondary)] mb-4">← Назад</button>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin w-8 h-8 border-4 border-[var(--color-primary)] border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-6 max-w-[640px] mx-auto">
