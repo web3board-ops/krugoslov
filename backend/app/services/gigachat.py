@@ -265,24 +265,49 @@ async def chat_json(
                 content = content[:-3]
             content = content.strip()
             
-            # Find JSON object or array
-            start_idx = content.find("{")
-            if start_idx == -1:
-                start_idx = content.find("[")
+            # Find JSON object or array - prioritize array if both exist
+            array_idx = content.find("[")
+            object_idx = content.find("{")
             
-            if start_idx == -1:
+            # Determine which comes first
+            if array_idx != -1 and (object_idx == -1 or array_idx < object_idx):
+                start_idx = array_idx
+                start_char = "["
+                end_char = "]"
+            elif object_idx != -1:
+                start_idx = object_idx
+                start_char = "{"
+                end_char = "}"
+            else:
                 raise Exception("No JSON found in response")
             
-            # Find matching closing bracket
-            open_char = content[start_idx]
-            close_char = "}" if open_char == "{" else "]"
+            # Find matching closing bracket with proper nesting
             depth = 0
             end_idx = -1
+            in_string = False
+            escape_next = False
             
             for i in range(start_idx, len(content)):
-                if content[i] == open_char:
+                char = content[i]
+                
+                if escape_next:
+                    escape_next = False
+                    continue
+                
+                if char == '\\':
+                    escape_next = True
+                    continue
+                
+                if char == '"':
+                    in_string = not in_string
+                    continue
+                
+                if in_string:
+                    continue
+                
+                if char == start_char or (start_char == "[" and char == "{") or (start_char == "{" and char == "["):
                     depth += 1
-                elif content[i] == close_char:
+                elif char == end_char or (start_char == "[" and char == "}") or (start_char == "{" and char == "]"):
                     depth -= 1
                     if depth == 0:
                         end_idx = i
