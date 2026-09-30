@@ -423,25 +423,32 @@ async def evaluate_translation(
     target_word_ids = set(w["word_id"] for w in target_words)
     
     def validator(data):
-        # Если результат - массив оценок (альтернативный формат)
+        # Если результат - массив оценок
         if isinstance(data, list):
             # Разделяем оценки и подсказки
             evaluations = [item for item in data if "result" in item]
-            suggestions = [item for item in data if "new_suggested_words" in item]
             
             # Проверяем, что все оценки имеют result
             for item in evaluations:
                 if not isinstance(item, dict) or "result" not in item:
                     return False
             
-            # Проверяем количество оценок
-            if len(evaluations) != len(target_words):
+            # Проверяем количество оценок (должно быть не меньше target_words)
+            if len(evaluations) < len(target_words):
                 return False
             
             return True
-        # Если результат - полная структура
+        
+        # Если результат - объект (альтернативный формат)
         elif isinstance(data, dict):
-            return validate_evaluation(data, target_word_ids, user_translation)
+            # Проверяем, есть ли хотя бы один из ожидаемых форматов
+            has_evaluations = "evaluations" in data
+            has_fragments = any(key.endswith("_fragment") for key in data.keys())
+            has_suggestions = "new_suggested_words" in data
+            
+            # Принимаем любой разумный формат
+            return has_evaluations or has_fragments or has_suggestions
+        
         return False
     
     result = await chat_json(
@@ -456,37 +463,75 @@ async def evaluate_translation(
         purpose="evaluation"
     )
     
-    # Если результат - массив оценок, преобразуем в полную структуру
+    # Нормализуем результат в единый формат
+    normalized_result = {
+        "evaluations": [],
+        "new_suggested_words": []
+    }
+    
+    # Если результат - массив
     if isinstance(result, list):
         # Разделяем оценки и подсказки
         eval_items = [item for item in result if "result" in item]
         suggestion_items = [item for item in result if "new_suggested_words" in item]
         
         # Сопоставляем оценки с target_words по порядку
-        evaluations = []
         for i, eval_item in enumerate(eval_items):
             if i < len(target_words):
                 word = target_words[i]
-                evaluations.append({
+                normalized_result["evaluations"].append({
                     "word_id": word["word_id"],
                     "result": eval_item.get("result", "incorrect"),
                     "user_fragment": eval_item.get("user_fragment")
                 })
         
         # Извлекаем подсказки
-        new_suggested_words = []
         for sugg_item in suggestion_items:
             words = sugg_item.get("new_suggested_words", [])
             if isinstance(words, list):
                 for word in words:
                     if isinstance(word, str):
-                        new_suggested_words.append({"lemma": word, "pos": "noun"})  # По умолчанию noun
+                        normalized_result["new_suggested_words"].append({"lemma": word, "pos": "noun"})
                     elif isinstance(word, dict):
-                        new_suggested_words.append(word)
-        
-        result = {
-            "evaluations": evaluations,
-            "new_suggested_words": new_suggested_words
-        }
+                        normalized_result["new_suggested_words"].append(word)
     
-    return result
+    # Если результат - объект
+    elif isinstance(result, dict):
+        # Формат 1: {"evaluations": [...], "new_suggested_words": [...]}
+        if "evaluations" in result:
+            normalized_result["evaluations"] = result["evaluations"]
+            normalized_result["new_suggested_words"] = result.get("new_suggested_words", [])
+        
+        # Формат 2: {"word_fragment": "...", "new_suggested_words": [...]}
+        else:
+            # Извлекаем фрагменты по именам слов
+            for word in target_words:
+                lemma = word["lemma"]
+                fragment_key = f"{lemma}_fragment"
+                if fragment_key in result:
+                    fragment = result[fragment_key]
+                    # Определяем результат по наличию фрагмента
+                    eval_result = "correct" if fragment else "incorrect"
+                    normalized_result["evaluations"].append({
+                        "word_id": word["word_id"],
+                        "result": eval_result,
+                        "user_fragment": fragment
+                    })
+                else:
+                    # Если фрагмента нет, считаем incorrect
+                    normalized_result["evaluations"].append({
+                        "word_id": word["word_id"],
+                        "result": "incorrect",
+                        "user_fragment": None
+                    })
+            
+            # Извлекаем подсказки
+            suggestions = result.get("new_suggested_words", [])
+            if isinstance(suggestions, list):
+                for word in suggestions:
+                    if isinstance(word, str):
+                        normalized_result["new_suggested_words"].append({"lemma": word, "pos": "noun"})
+                    elif isinstance(word, dict):
+                        normalized_result["new_suggested_words"].append(word)
+    
+    return normalized_result
