@@ -200,8 +200,22 @@ def validate_generated_sentence(
             logger.warning(f"No Cyrillic in translation: {translation[:100]}")
             # Don't fail, just warn
         
-        # Check words
+        # Check words - support both formats: "words" (array of objects) and "surface_forms" (array of strings)
         words = sentence_data.get("words", [])
+        surface_forms = sentence_data.get("surface_forms", [])
+        
+        # If we have surface_forms instead of words, convert it
+        if not words and surface_forms:
+            logger.warning("Using surface_forms instead of words")
+            words = []
+            for i, form in enumerate(surface_forms):
+                if i < len(group_words):
+                    words.append({
+                        "lemma": group_words[i].get("lemma"),
+                        "pos": group_words[i].get("pos"),
+                        "surface_form": form
+                    })
+        
         if len(words) != len(group_words):
             logger.warning(f"Wrong number of words: expected {len(group_words)}, got {len(words)}")
             return False
@@ -265,16 +279,34 @@ async def generate_sentences(
     
     def validator(data):
         logger.info(f"Validating response: {data}")
-        if not isinstance(data, list):
-            logger.error(f"Response is not a list: {type(data)}")
+        
+        # GigaChat может вернуть объект с числовыми ключами вместо массива
+        # Конвертируем объект в массив для проверки
+        check_data = data
+        if isinstance(data, dict):
+            logger.warning("Response is dict, will convert to list")
+            try:
+                check_data = [data[str(i)] for i in range(len(data))]
+                for i, item in enumerate(check_data):
+                    if "group_index" not in item:
+                        item["group_index"] = i
+            except Exception as e:
+                logger.error(f"Failed to convert dict to list: {e}")
+                return False
+        
+        if not isinstance(check_data, list):
+            logger.error(f"Response is not a list: {type(check_data)}")
             return False
-        if len(data) != len(groups):
-            logger.error(f"Expected {len(groups)} items, got {len(data)}")
+        
+        if len(check_data) != len(groups):
+            logger.error(f"Expected {len(groups)} items, got {len(check_data)}")
             return False
-        for i, item in enumerate(data):
+        
+        for i, item in enumerate(check_data):
             if not validate_generated_sentence(item, i, groups_data[i]["words"], avoid_sentences):
                 logger.error(f"Validation failed for item {i}: {item}")
                 return False
+        
         logger.info("Validation passed")
         return True
     
@@ -289,6 +321,15 @@ async def generate_sentences(
             lesson_id=lesson_id,
             purpose="generation"
         )
+        
+        # Конвертируем dict в list если нужно (повторно, т.к. validator не меняет результат)
+        if isinstance(result, dict):
+            logger.warning("Converting dict result to list")
+            result = [result[str(i)] for i in range(len(result))]
+            for i, item in enumerate(result):
+                if "group_index" not in item:
+                    item["group_index"] = i
+        
         logger.info(f"Successfully generated {len(result)} sentences")
         return result
     except Exception as e:
