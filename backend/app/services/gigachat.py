@@ -265,59 +265,12 @@ async def chat_json(
                 content = content[:-3]
             content = content.strip()
             
-            # Find JSON object or array - prioritize array if both exist
-            array_idx = content.find("[")
-            object_idx = content.find("{")
-            
-            # Determine which comes first
-            if array_idx != -1 and (object_idx == -1 or array_idx < object_idx):
-                start_idx = array_idx
-                start_char = "["
-                end_char = "]"
-            elif object_idx != -1:
-                start_idx = object_idx
-                start_char = "{"
-                end_char = "}"
-            else:
-                raise Exception("No JSON found in response")
-            
-            # Find matching closing bracket with proper nesting
-            depth = 0
-            end_idx = -1
-            in_string = False
-            escape_next = False
-            
-            for i in range(start_idx, len(content)):
-                char = content[i]
-                
-                if escape_next:
-                    escape_next = False
-                    continue
-                
-                if char == '\\':
-                    escape_next = True
-                    continue
-                
-                if char == '"':
-                    in_string = not in_string
-                    continue
-                
-                if in_string:
-                    continue
-                
-                if char == start_char or (start_char == "[" and char == "{") or (start_char == "{" and char == "["):
-                    depth += 1
-                elif char == end_char or (start_char == "[" and char == "}") or (start_char == "{" and char == "]"):
-                    depth -= 1
-                    if depth == 0:
-                        end_idx = i
-                        break
-            
-            if end_idx == -1:
-                raise Exception("Unmatched JSON brackets")
-            
-            json_str = content[start_idx:end_idx + 1]
-            parsed = json.loads(json_str)
+            # Просто парсим JSON напрямую
+            try:
+                parsed = json.loads(content)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Direct JSON parse failed: {e}. Content: {content[:200]}")
+                raise Exception(f"Invalid JSON from LLM: {e}")
             
             # Validate
             if not validator(parsed):
