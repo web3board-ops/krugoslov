@@ -318,10 +318,12 @@ async def evaluate_exercise(
     user: User = Depends(get_current_user_onboarded),
     db: AsyncSession = Depends(get_db)
 ):
-    # Get exercise
+    # Get exercise with lesson and profile
     result = await db.execute(
         select(LessonExercise)
-        .join(Lesson)
+        .options(
+            selectinload(LessonExercise.lesson).selectinload(Lesson.profile)
+        )
         .where(LessonExercise.id == request.exercise_id)
     )
     exercise = result.scalar_one_or_none()
@@ -594,12 +596,12 @@ async def get_current_exercise(
 ):
     result = await db.execute(
         select(Lesson)
-        .options(selectinload(Lesson.learning_profile))
+        .options(selectinload(Lesson.profile))
         .where(Lesson.id == lesson_id)
     )
     lesson = result.scalar_one_or_none()
     
-    if not lesson or lesson.learning_profile.user_id != user.id:
+    if not lesson or lesson.profile.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     
     if lesson.status != LessonStatus.in_progress:
@@ -637,12 +639,12 @@ async def abandon_lesson(
 ):
     result = await db.execute(
         select(Lesson)
-        .options(selectinload(Lesson.learning_profile))
+        .options(selectinload(Lesson.profile))
         .where(Lesson.id == lesson_id)
     )
     lesson = result.scalar_one_or_none()
     
-    if not lesson or lesson.learning_profile.user_id != user.id:
+    if not lesson or lesson.profile.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     
     if lesson.status == LessonStatus.completed:
@@ -673,12 +675,12 @@ async def get_lesson_summary(
 ):
     result = await db.execute(
         select(Lesson)
-        .options(selectinload(Lesson.learning_profile))
+        .options(selectinload(Lesson.profile))
         .where(Lesson.id == lesson_id)
     )
     lesson = result.scalar_one_or_none()
     
-    if not lesson or lesson.learning_profile.user_id != user.id:
+    if not lesson or lesson.profile.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     
     if lesson.status != LessonStatus.completed:
@@ -705,7 +707,9 @@ async def get_lesson_summary(
     
     # Count exercises without errors
     result = await db.execute(
-        select(LessonExercise).where(LessonExercise.lesson_id == lesson_id)
+        select(LessonExercise)
+        .options(selectinload(LessonExercise.words))
+        .where(LessonExercise.lesson_id == lesson_id)
     )
     exercises = list(result.scalars().all())
     without_errors = sum(
