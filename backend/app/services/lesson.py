@@ -425,13 +425,19 @@ async def evaluate_translation(
     def validator(data):
         # Если результат - массив оценок (альтернативный формат)
         if isinstance(data, list):
-            # Проверяем, что все элементы имеют result
-            for item in data:
+            # Разделяем оценки и подсказки
+            evaluations = [item for item in data if "result" in item]
+            suggestions = [item for item in data if "new_suggested_words" in item]
+            
+            # Проверяем, что все оценки имеют result
+            for item in evaluations:
                 if not isinstance(item, dict) or "result" not in item:
                     return False
+            
             # Проверяем количество оценок
-            if len(data) != len(target_words):
+            if len(evaluations) != len(target_words):
                 return False
+            
             return True
         # Если результат - полная структура
         elif isinstance(data, dict):
@@ -452,9 +458,13 @@ async def evaluate_translation(
     
     # Если результат - массив оценок, преобразуем в полную структуру
     if isinstance(result, list):
+        # Разделяем оценки и подсказки
+        eval_items = [item for item in result if "result" in item]
+        suggestion_items = [item for item in result if "new_suggested_words" in item]
+        
         # Сопоставляем оценки с target_words по порядку
         evaluations = []
-        for i, eval_item in enumerate(result):
+        for i, eval_item in enumerate(eval_items):
             if i < len(target_words):
                 word = target_words[i]
                 evaluations.append({
@@ -463,9 +473,20 @@ async def evaluate_translation(
                     "user_fragment": eval_item.get("user_fragment")
                 })
         
+        # Извлекаем подсказки
+        new_suggested_words = []
+        for sugg_item in suggestion_items:
+            words = sugg_item.get("new_suggested_words", [])
+            if isinstance(words, list):
+                for word in words:
+                    if isinstance(word, str):
+                        new_suggested_words.append({"lemma": word, "pos": "noun"})  # По умолчанию noun
+                    elif isinstance(word, dict):
+                        new_suggested_words.append(word)
+        
         result = {
             "evaluations": evaluations,
-            "new_suggested_words": []
+            "new_suggested_words": new_suggested_words
         }
     
     return result
