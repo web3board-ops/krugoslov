@@ -31,17 +31,23 @@ async def update_timezone(
             detail={"code": "invalid_timezone", "message": "Invalid timezone format"}
         )
     
+    # Get user's learning_profile_id
+    result = await db.execute(
+        select(LearningProfile.id).where(LearningProfile.user_id == user.id)
+    )
+    user_profile_id = result.scalar_one_or_none()
+    
     # Idempotent
     if user.timezone == request.timezone:
         today = get_local_date(request.timezone)
         result = await db.execute(
             select(func.count(Lesson.id)).where(
-                Lesson.learning_profile_id == user.learning_profile.id,
+                Lesson.learning_profile_id == user_profile_id,
                 Lesson.started_local_date == today
             )
         )
         lessons_today = result.scalar()
-        streak = await get_user_streak(db, user.learning_profile.id, request.timezone)
+        streak = await get_user_streak(db, user_profile_id, request.timezone)
         return TimezoneResponse(
             today=today,
             lessons_today=lessons_today,
@@ -72,12 +78,12 @@ async def update_timezone(
     today = get_local_date(request.timezone)
     result = await db.execute(
         select(func.count(Lesson.id)).where(
-            Lesson.learning_profile_id == user.learning_profile.id,
+            Lesson.learning_profile_id == user_profile_id,
             Lesson.started_local_date == today
         )
     )
     lessons_today = result.scalar()
-    streak = await get_user_streak(db, user.learning_profile.id, request.timezone)
+    streak = await get_user_streak(db, user_profile_id, request.timezone)
     
     return TimezoneResponse(
         today=today,

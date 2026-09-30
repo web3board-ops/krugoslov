@@ -340,8 +340,13 @@ async def evaluate_exercise(
             detail={"code": "lesson_not_active", "message": "Lesson not active"}
         )
     
-    # Check ownership
-    if lesson.learning_profile_id != user.learning_profile.id:
+    # Check ownership - get learning_profile_id separately
+    result = await db.execute(
+        select(LearningProfile.id).where(LearningProfile.user_id == user.id)
+    )
+    user_profile_id = result.scalar_one_or_none()
+    
+    if lesson.learning_profile_id != user_profile_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     
     # Check if already evaluated (idempotent)
@@ -754,6 +759,12 @@ async def handle_suggestion(
     user: User = Depends(get_current_user_onboarded),
     db: AsyncSession = Depends(get_db)
 ):
+    # Get user's learning_profile_id
+    result = await db.execute(
+        select(LearningProfile.id).where(LearningProfile.user_id == user.id)
+    )
+    user_profile_id = result.scalar_one_or_none()
+    
     # Get suggestion
     result = await db.execute(
         select(LessonExerciseSuggestion)
@@ -762,7 +773,7 @@ async def handle_suggestion(
         .where(
             LessonExerciseSuggestion.exercise_id == exercise_id,
             LessonExerciseSuggestion.word_id == word_id,
-            Lesson.learning_profile_id == user.learning_profile.id
+            Lesson.learning_profile_id == user_profile_id
         )
     )
     suggestion = result.scalar_one_or_none()
@@ -777,7 +788,7 @@ async def handle_suggestion(
         # Add to user_words
         result = await db.execute(
             select(UserWord).where(
-                UserWord.learning_profile_id == user.learning_profile.id,
+                UserWord.learning_profile_id == user_profile_id,
                 UserWord.word_id == word_id
             )
         )
@@ -791,7 +802,7 @@ async def handle_suggestion(
         
         lesson = suggestion.exercise.lesson
         user_word = UserWord(
-            learning_profile_id=user.learning_profile.id,
+            learning_profile_id=user_profile_id,
             word_id=word_id,
             status=WordStatus.active,
             stage=0,
@@ -815,13 +826,13 @@ async def handle_suggestion(
         # Add as ignored
         result = await db.execute(
             select(UserWord).where(
-                UserWord.learning_profile_id == user.learning_profile.id,
+                UserWord.learning_profile_id == user_profile_id,
                 UserWord.word_id == word_id
             )
         )
         if not result.scalar_one_or_none():
             user_word = UserWord(
-                learning_profile_id=user.learning_profile.id,
+                learning_profile_id=user_profile_id,
                 word_id=word_id,
                 status=WordStatus.ignored,
                 stage=0,
