@@ -23,9 +23,16 @@ export function ReviewPage() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (hasNextExercise) {
-      navigate(`/lesson/${lessonId}/current`);
+      try {
+        const { lessonApi } = await import('../api/client');
+        const nextExercise = await lessonApi.getCurrent(Number(lessonId));
+        navigate(`/lesson/${lessonId}/exercise/${nextExercise.exercise_id}`);
+      } catch (error) {
+        console.error('Failed to get next exercise:', error);
+        navigate(`/lesson/${lessonId}/complete`);
+      }
     } else {
       navigate(`/lesson/${lessonId}/complete`);
     }

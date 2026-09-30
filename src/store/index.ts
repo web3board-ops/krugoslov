@@ -42,6 +42,7 @@ interface AppState {
   
   getProfileStats: () => Promise<any>;
   getDictionaries: () => Promise<any[]>;
+  getLearningProfile: () => Promise<any>;
   
   addSuggestion: (exerciseId: number, wordId: number) => Promise<void>;
   ignoreSuggestion: (exerciseId: number, wordId: number) => Promise<void>;
@@ -172,6 +173,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   getDictionaries: async () => {
     return await settingsApi.getDictionaries();
+  },
+
+  getLearningProfile: async () => {
+    return await settingsApi.getLearningProfile();
   },
 
   addSuggestion: async (exerciseId, wordId) => {

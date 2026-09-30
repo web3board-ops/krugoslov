@@ -4,7 +4,7 @@ import { useStore } from '../store';
 
 export function LearningSettingsPage() {
   const navigate = useNavigate();
-  const { profile, updateProfile, getDictionaries } = useStore();
+  const { profile, updateProfile, getDictionaries, getLearningProfile } = useStore();
   const [level, setLevel] = useState(profile?.level || 'A1');
   const [dictionaryId, setDictionaryId] = useState(profile?.dictionary_id || 1);
   const [dailyLimit, setDailyLimit] = useState(profile?.daily_lesson_limit || 3);
@@ -26,6 +26,15 @@ export function LearningSettingsPage() {
 
   const handleSave = async () => {
     await updateProfile({ level, dictionary_id: dictionaryId, daily_lesson_limit: dailyLimit });
+    
+    // Перезагружаем данные профиля для отображения изменений
+    const profileData = await getLearningProfile();
+    if (profileData) {
+      setLevel(profileData.level);
+      setDictionaryId(profileData.dictionary_id);
+      setDailyLimit(profileData.daily_lesson_limit);
+    }
+    
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

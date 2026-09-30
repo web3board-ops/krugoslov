@@ -29,11 +29,10 @@ export function ExercisePage() {
     setLoading(true);
     try {
       const result = await evaluateExercise(Number(exerciseId), translation.trim(), false);
-      if (result.lesson_completed) {
-        navigate(`/lesson/${lessonId}/complete`);
-      } else {
-        navigate(`/lesson/${lessonId}/review/${exerciseId}`);
-      }
+      console.log('Evaluation result:', result);
+      
+      // Всегда переходим на Review, а оттуда решаем - следующее упражнение или завершение
+      navigate(`/lesson/${lessonId}/review/${exerciseId}`);
     } catch (error) {
       console.error('Failed to evaluate:', error);
     } finally {
@@ -45,11 +44,10 @@ export function ExercisePage() {
     setLoading(true);
     try {
       const result = await evaluateExercise(Number(exerciseId), null, true);
-      if (result.lesson_completed) {
-        navigate(`/lesson/${lessonId}/complete`);
-      } else {
-        navigate(`/lesson/${lessonId}/review/${exerciseId}`);
-      }
+      console.log('Evaluation result (dont know):', result);
+      
+      // Всегда переходим на Review
+      navigate(`/lesson/${lessonId}/review/${exerciseId}`);
     } catch (error) {
       console.error('Failed to evaluate:', error);
     } finally {
