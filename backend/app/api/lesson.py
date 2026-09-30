@@ -508,7 +508,10 @@ async def evaluate_exercise(
     )
     pending_count = result.scalar()
     
+    logger.info(f"Lesson {lesson.id}: pending_count={pending_count}")
+    
     if pending_count == 0:
+        logger.info(f"Lesson {lesson.id} completed, updating status")
         lesson.status = LessonStatus.completed
         lesson.completed_at = datetime.utcnow()
         lesson.completed_local_date = get_local_date(user.timezone)

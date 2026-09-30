@@ -28,8 +28,12 @@ export function ExercisePage() {
     if (!translation.trim()) return;
     setLoading(true);
     try {
-      await evaluateExercise(Number(exerciseId), translation.trim(), false);
-      navigate(`/lesson/${lessonId}/review/${exerciseId}`);
+      const result = await evaluateExercise(Number(exerciseId), translation.trim(), false);
+      if (result.lesson_completed) {
+        navigate(`/lesson/${lessonId}/complete`);
+      } else {
+        navigate(`/lesson/${lessonId}/review/${exerciseId}`);
+      }
     } catch (error) {
       console.error('Failed to evaluate:', error);
     } finally {
@@ -40,8 +44,12 @@ export function ExercisePage() {
   const handleDontKnow = async () => {
     setLoading(true);
     try {
-      await evaluateExercise(Number(exerciseId), null, true);
-      navigate(`/lesson/${lessonId}/review/${exerciseId}`);
+      const result = await evaluateExercise(Number(exerciseId), null, true);
+      if (result.lesson_completed) {
+        navigate(`/lesson/${lessonId}/complete`);
+      } else {
+        navigate(`/lesson/${lessonId}/review/${exerciseId}`);
+      }
     } catch (error) {
       console.error('Failed to evaluate:', error);
     } finally {
