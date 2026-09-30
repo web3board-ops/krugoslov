@@ -384,7 +384,9 @@ async def evaluate_exercise(
     
     # Get target words
     result = await db.execute(
-        select(LessonExerciseWord).where(
+        select(LessonExerciseWord)
+        .options(selectinload(LessonExerciseWord.word))
+        .where(
             LessonExerciseWord.exercise_id == exercise.id,
             LessonExerciseWord.is_target == True
         )
