@@ -280,19 +280,30 @@ async def generate_sentences(
     def validator(data):
         logger.info(f"Validating response: {data}")
         
-        # GigaChat может вернуть объект с числовыми ключами вместо массива
-        # Конвертируем объект в массив для проверки
+        # GigaChat может вернуть:
+        # 1. Один объект (dict) - нужно обернуть в массив
+        # 2. Объект с числовыми ключами ("0", "1") - конвертировать в массив
+        # 3. Массив - оставить как есть
         check_data = data
+        
         if isinstance(data, dict):
-            logger.warning("Response is dict, will convert to list")
-            try:
-                check_data = [data[str(i)] for i in range(len(data))]
-                for i, item in enumerate(check_data):
-                    if "group_index" not in item:
-                        item["group_index"] = i
-            except Exception as e:
-                logger.error(f"Failed to convert dict to list: {e}")
-                return False
+            logger.warning("Response is dict, converting to list")
+            
+            # Проверяем, это объект с числовыми ключами или один объект предложения
+            if "sentence" in data and "group_index" in data:
+                # Это один объект предложения - оборачиваем в массив
+                logger.info("Single sentence object, wrapping in list")
+                check_data = [data]
+            else:
+                # Это объект с числовыми ключами
+                try:
+                    check_data = [data[str(i)] for i in range(len(data))]
+                    for i, item in enumerate(check_data):
+                        if "group_index" not in item:
+                            item["group_index"] = i
+                except Exception as e:
+                    logger.error(f"Failed to convert dict to list: {e}")
+                    return False
         
         if not isinstance(check_data, list):
             logger.error(f"Response is not a list: {type(check_data)}")
@@ -315,7 +326,7 @@ async def generate_sentences(
             messages=messages,
             validator=validator,
             temperature=settings.GEN_TEMPERATURE,
-            max_tokens=2000,
+            max_tokens=4000,  # Увеличено с 2000 до 4000
             timeout=30,
             user_id=user_id,
             lesson_id=lesson_id,
@@ -325,10 +336,16 @@ async def generate_sentences(
         # Конвертируем dict в list если нужно (повторно, т.к. validator не меняет результат)
         if isinstance(result, dict):
             logger.warning("Converting dict result to list")
-            result = [result[str(i)] for i in range(len(result))]
-            for i, item in enumerate(result):
-                if "group_index" not in item:
-                    item["group_index"] = i
+            # Проверяем, это один объект или объект с числовыми ключами
+            if "sentence" in result and "group_index" in result:
+                # Один объект - оборачиваем в массив
+                result = [result]
+            else:
+                # Объект с числовыми ключами
+                result = [result[str(i)] for i in range(len(result))]
+                for i, item in enumerate(result):
+                    if "group_index" not in item:
+                        item["group_index"] = i
         
         logger.info(f"Successfully generated {len(result)} sentences")
         return result
@@ -409,7 +426,7 @@ async def evaluate_translation(
         messages=messages,
         validator=validator,
         temperature=settings.EVAL_TEMPERATURE,
-        max_tokens=1000,
+        max_tokens=1500,
         timeout=15,
         user_id=user_id,
         lesson_id=lesson_id,
