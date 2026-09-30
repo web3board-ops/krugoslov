@@ -15,6 +15,7 @@ import { ProfilePage } from './pages/Profile';
 import { SettingsPage } from './pages/Settings';
 import { LearningSettingsPage } from './pages/LearningSettings';
 import { AdminPage } from './pages/Admin';
+import { PromptsAdminPage } from './pages/PromptsAdmin';
 import { NotFoundPage } from './pages/NotFound';
 import { Layout } from './components/Layout';
 
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="/lesson/resume/:lessonId" element={<ProtectedRoute><ResumePage /></ProtectedRoute>} />
         
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+        <Route path="/admin/prompts" element={<PromptsAdminPage />} />
         
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

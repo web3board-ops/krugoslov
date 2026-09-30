@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from app.config import settings
-from app.api import auth, onboarding, dashboard, lesson, vocabulary, profile, settings as settings_api, admin
+from app.api import auth, onboarding, dashboard, lesson, vocabulary, profile, settings as settings_api, admin, prompts
 
 # Настройка логирования
 logging.basicConfig(
@@ -37,6 +37,7 @@ app.include_router(profile.router)
 app.include_router(settings_api.router)
 app.include_router(settings_api.router_lp)
 app.include_router(admin.router)
+app.include_router(prompts.router)
 
 
 @app.get("/")

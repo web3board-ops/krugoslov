@@ -344,3 +344,14 @@ class DictionaryImport(Base):
     # Relationships
     admin = relationship("User")
     dictionary = relationship("Dictionary")
+
+
+class PromptTemplate(Base):
+    __tablename__ = "prompt_templates"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    template = Column(Text, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

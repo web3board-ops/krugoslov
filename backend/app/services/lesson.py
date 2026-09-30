@@ -16,7 +16,7 @@ from app.models import (
 from app.services.srs import srs_update
 from app.services.streak import get_local_date
 from app.services.gigachat import chat_json
-from app.prompts.templates import build_generation_prompt, build_evaluation_prompt
+from app.prompts.templates import build_generation_prompt, build_evaluation_prompt, get_prompt_from_db, DEFAULT_GENERATION_PROMPT, DEFAULT_EVALUATION_PROMPT
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -278,7 +278,17 @@ async def generate_sentences(
     logger.info(f"Generating sentences for {len(groups)} groups, level {level}")
     logger.debug(f"Groups data: {groups_data}")
     
-    messages = build_generation_prompt(level, groups_data)
+    # Try to load prompt from DB, fallback to default
+    prompt_template = await get_prompt_from_db("generation")
+    if prompt_template:
+        logger.info("Using generation prompt from database")
+        system_prompt = prompt_template.format(level=level)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": str({"level": level, "groups": groups_data})}
+        ]
+    else:
+        messages = build_generation_prompt(level, groups_data)
     
     def validator(data):
         logger.info(f"Validating response: {data}")
@@ -412,13 +422,31 @@ async def evaluate_translation(
     exercise_id: int
 ) -> Dict:
     """Evaluate translation using LLM (algorithm 5.5 step 6)"""
+    import secrets
     
-    messages = build_evaluation_prompt(
-        target_sentence,
-        reference_translation,
-        target_words,
-        user_translation
-    )
+    # Try to load prompt from DB, fallback to default
+    prompt_template = await get_prompt_from_db("evaluation")
+    if prompt_template:
+        logger.info("Using evaluation prompt from database")
+        delimiter = f"UT_{secrets.token_hex(4)}"
+        system_prompt = prompt_template.format(delimiter=delimiter)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": str({
+                "target_sentence": target_sentence,
+                "reference_translation": reference_translation,
+                "target_words": target_words,
+                "allowed_pos": ["noun", "verb", "adj", "adv", "pron", "prep", "conj", "num", "det", "intj"],
+                "user_translation": f"<<<{delimiter}>>>{user_translation}<<<{delimiter}>>>"
+            })}
+        ]
+    else:
+        messages = build_evaluation_prompt(
+            target_sentence,
+            reference_translation,
+            target_words,
+            user_translation
+        )
     
     target_word_ids = set(w["word_id"] for w in target_words)
     

@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     EVAL_TEMPERATURE: float = 0.2
     LLM_LOG_RETENTION_DAYS: int = 90
     
+    # Admin
+    ADMIN_PASSWORD: str = "admin123"
+    
     # CORS
     CORS_ORIGINS: str = "http://localhost:5173"
     

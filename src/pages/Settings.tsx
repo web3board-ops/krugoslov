@@ -76,13 +76,22 @@ export function SettingsPage() {
 
       {/* Admin link */}
       {user.is_admin && (
-        <button
-          onClick={() => navigate('/admin')}
-          className="w-full bg-white rounded-xl border border-[var(--color-border)] p-4 flex items-center justify-between card-hover mb-4"
-        >
-          <span className="font-medium text-sm">🛠 Админ-панель</span>
-          <ChevronRight size={16} className="text-gray-400" />
-        </button>
+        <>
+          <button
+            onClick={() => navigate('/admin')}
+            className="w-full bg-white rounded-xl border border-[var(--color-border)] p-4 flex items-center justify-between card-hover mb-4"
+          >
+            <span className="font-medium text-sm">🛠 Админ-панель</span>
+            <ChevronRight size={16} className="text-gray-400" />
+          </button>
+          <button
+            onClick={() => navigate('/admin/prompts')}
+            className="w-full bg-white rounded-xl border border-[var(--color-border)] p-4 flex items-center justify-between card-hover mb-4"
+          >
+            <span className="font-medium text-sm">📝 Управление промптами</span>
+            <ChevronRight size={16} className="text-gray-400" />
+          </button>
+        </>
       )}
 
       {/* Logout */}
