@@ -284,19 +284,22 @@ async def start_lesson(
     event = Event(user_id=user_id, type="lesson_started", payload={"lesson_id": lesson.id})
     db.add(event)
     
-    await db.commit()
-    
-    # Return first exercise
+    # Save first exercise before commit (can't lazy load after commit in async)
     first_exercise = lesson.exercises[0] if lesson.exercises else None
+    first_exercise_id = first_exercise.id if first_exercise else None
+    first_exercise_order = first_exercise.order_index if first_exercise else None
+    first_exercise_sentence = first_exercise.target_sentence if first_exercise else None
+    
+    await db.commit()
     
     return LessonStartResponse(
         lesson_id=lesson.id,
         lesson_number=next_lesson_number,
         exercises_total=len(groups),
         current_exercise={
-            "exercise_id": first_exercise.id,
-            "order_index": first_exercise.order_index,
-            "sentence": first_exercise.target_sentence
+            "exercise_id": first_exercise_id,
+            "order_index": first_exercise_order,
+            "sentence": first_exercise_sentence
         }
     )
 
@@ -511,9 +514,13 @@ async def evaluate_exercise(
 
 async def _build_evaluate_response(db: AsyncSession, exercise: LessonExercise) -> EvaluateResponse:
     """Build evaluate response from exercise"""
-    # Get target words
+    from sqlalchemy.orm import selectinload
+    
+    # Get target words with related word data
     result = await db.execute(
-        select(LessonExerciseWord).where(
+        select(LessonExerciseWord)
+        .options(selectinload(LessonExerciseWord.word))
+        .where(
             LessonExerciseWord.exercise_id == exercise.id,
             LessonExerciseWord.is_target == True
         )
@@ -533,9 +540,11 @@ async def _build_evaluate_response(db: AsyncSession, exercise: LessonExercise) -
             "translations": word.translations
         })
     
-    # Get suggestions
+    # Get suggestions with related word data
     result = await db.execute(
-        select(LessonExerciseSuggestion).where(
+        select(LessonExerciseSuggestion)
+        .options(selectinload(LessonExerciseSuggestion.word))
+        .where(
             LessonExerciseSuggestion.exercise_id == exercise.id
         )
     )
@@ -551,9 +560,12 @@ async def _build_evaluate_response(db: AsyncSession, exercise: LessonExercise) -
             "translations": word.translations
         })
     
-    # Check if lesson completed
-    lesson = exercise.lesson
-    lesson_completed = lesson.status == LessonStatus.completed
+    # Check if lesson completed - reload lesson to get current status
+    result = await db.execute(
+        select(Lesson).where(Lesson.id == exercise.lesson_id)
+    )
+    lesson = result.scalar_one_or_none()
+    lesson_completed = lesson.status == LessonStatus.completed if lesson else False
     
     return EvaluateResponse(
         exercise_id=exercise.id,
