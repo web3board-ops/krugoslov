@@ -14,12 +14,24 @@ export function ReviewPage() {
   }, [exerciseId]);
 
   const checkNextExercise = async () => {
+    // Если урок уже завершён, не нужно проверять следующее упражнение
+    if (currentEvaluation?.lesson_completed) {
+      setHasNextExercise(false);
+      return;
+    }
+
     try {
       const { lessonApi } = await import('../api/client');
       await lessonApi.getCurrent(Number(lessonId));
       setHasNextExercise(true);
-    } catch (error) {
-      setHasNextExercise(false);
+    } catch (error: any) {
+      // 409 означает что урок не in_progress (завершён или отменён)
+      if (error.status === 409) {
+        setHasNextExercise(false);
+      } else {
+        console.error('Failed to check next exercise:', error);
+        setHasNextExercise(false);
+      }
     }
   };
 

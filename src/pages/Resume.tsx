@@ -17,8 +17,12 @@ export function ResumePage() {
     try {
       const data = await lessonApi.getCurrent(Number(lessonId));
       setLesson(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load lesson:', error);
+      // Если урок завершён (409), перенаправляем на главную
+      if (error.status === 409) {
+        navigate('/');
+      }
     }
   };
 

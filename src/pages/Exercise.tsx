@@ -19,8 +19,12 @@ export function ExercisePage() {
     try {
       const data = await lessonApi.getCurrent(Number(lessonId));
       setExercise(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load exercise:', error);
+      // Если урок завершён (409), перенаправляем на страницу завершения
+      if (error.status === 409) {
+        navigate(`/lesson/${lessonId}/complete`);
+      }
     }
   };
 
