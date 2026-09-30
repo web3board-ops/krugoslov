@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, update
+from sqlalchemy.orm import selectinload
 from typing import Optional
 import unicodedata
 import re
@@ -592,7 +593,9 @@ async def get_current_exercise(
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
-        select(Lesson).where(Lesson.id == lesson_id)
+        select(Lesson)
+        .options(selectinload(Lesson.learning_profile))
+        .where(Lesson.id == lesson_id)
     )
     lesson = result.scalar_one_or_none()
     
@@ -633,7 +636,9 @@ async def abandon_lesson(
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
-        select(Lesson).where(Lesson.id == lesson_id)
+        select(Lesson)
+        .options(selectinload(Lesson.learning_profile))
+        .where(Lesson.id == lesson_id)
     )
     lesson = result.scalar_one_or_none()
     
@@ -667,7 +672,9 @@ async def get_lesson_summary(
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
-        select(Lesson).where(Lesson.id == lesson_id)
+        select(Lesson)
+        .options(selectinload(Lesson.learning_profile))
+        .where(Lesson.id == lesson_id)
     )
     lesson = result.scalar_one_or_none()
     
