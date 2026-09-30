@@ -5,8 +5,11 @@ from sqlalchemy.orm import selectinload
 from typing import Optional
 import unicodedata
 import re
+import logging
 from datetime import datetime
 from app.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.models import (
     User, LearningProfile, UserWord, Word, Lesson, LessonExercise,
     LessonExerciseWord, LessonExerciseSuggestion, Dictionary, Event,
