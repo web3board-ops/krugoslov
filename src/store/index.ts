@@ -14,6 +14,9 @@ interface AppState {
   currentLessonId: number | null;
   currentExerciseId: number | null;
   
+  // Current evaluation result
+  currentEvaluation: any | null;
+  
   // Actions
   setAccessToken: (token: string | null) => void;
   register: (email: string, password: string) => Promise<boolean>;
@@ -53,6 +56,7 @@ export const useStore = create<AppState>((set, get) => ({
   profile: null,
   currentLessonId: null,
   currentExerciseId: null,
+  currentEvaluation: null,
 
   setAccessToken: (token) => {
     setAccessToken(token);
@@ -128,7 +132,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   evaluateExercise: async (exerciseId, userTranslation, dontKnow) => {
-    return await lessonApi.evaluate(exerciseId, userTranslation, dontKnow);
+    const result = await lessonApi.evaluate(exerciseId, userTranslation, dontKnow);
+    set({ currentEvaluation: result });
+    return result;
   },
 
   getLessonSummary: async (lessonId) => {
