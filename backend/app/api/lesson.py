@@ -284,8 +284,15 @@ async def start_lesson(
     event = Event(user_id=user_id, type="lesson_started", payload={"lesson_id": lesson.id})
     db.add(event)
     
-    # Save first exercise before commit (can't lazy load after commit in async)
-    first_exercise = lesson.exercises[0] if lesson.exercises else None
+    # Get first exercise explicitly (can't use lazy loading in async)
+    result = await db.execute(
+        select(LessonExercise)
+        .where(LessonExercise.lesson_id == lesson.id)
+        .order_by(LessonExercise.order_index)
+        .limit(1)
+    )
+    first_exercise = result.scalar_one_or_none()
+    
     first_exercise_id = first_exercise.id if first_exercise else None
     first_exercise_order = first_exercise.order_index if first_exercise else None
     first_exercise_sentence = first_exercise.target_sentence if first_exercise else None
