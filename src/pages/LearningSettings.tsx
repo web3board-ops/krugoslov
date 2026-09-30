@@ -8,6 +8,7 @@ export function LearningSettingsPage() {
   const [level, setLevel] = useState(profile?.level || 'A1');
   const [dictionaryId, setDictionaryId] = useState(profile?.dictionary_id || 1);
   const [dailyLimit, setDailyLimit] = useState(profile?.daily_lesson_limit || 3);
+  const [dailyLimitMax, setDailyLimitMax] = useState(5);
   const [wordsPerLesson, setWordsPerLesson] = useState(profile?.words_per_lesson || 5);
   const [wordsPerLessonMax, setWordsPerLessonMax] = useState(10);
   const [dictionaries, setDictionaries] = useState<any[]>([]);
@@ -31,6 +32,7 @@ export function LearningSettingsPage() {
         setLevel(profileData.level);
         setDictionaryId(profileData.dictionary_id);
         setDailyLimit(profileData.daily_lesson_limit);
+        setDailyLimitMax(profileData.daily_lesson_limit_max);
         setWordsPerLesson(profileData.words_per_lesson);
         setWordsPerLessonMax(profileData.words_per_lesson_max);
       }
@@ -106,9 +108,12 @@ export function LearningSettingsPage() {
       <div className="bg-white rounded-xl border border-[var(--color-border)] p-4 mb-4">
         <span className="font-medium text-sm block mb-3">Уроков в день</span>
         <div className="flex items-center gap-3">
-          <input type="range" min={1} max={5} value={dailyLimit} onChange={e => setDailyLimit(Number(e.target.value))} className="flex-1" />
+          <input type="range" min={1} max={dailyLimitMax} value={dailyLimit} onChange={e => setDailyLimit(Number(e.target.value))} className="flex-1" />
           <span className="text-lg font-bold w-8 text-center">{dailyLimit}</span>
         </div>
+        <p className="text-xs text-[var(--color-text-secondary)] mt-2">
+          Максимум: {dailyLimitMax} уроков
+        </p>
       </div>
       <div className="bg-white rounded-xl border border-[var(--color-border)] p-4 mb-6">
         <span className="font-medium text-sm block mb-3">Слов в уроке</span>
